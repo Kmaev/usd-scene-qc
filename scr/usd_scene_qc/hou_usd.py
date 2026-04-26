@@ -7,13 +7,20 @@ from pxr import Usd, UsdGeom, UsdRender, UsdUtils, UsdShade
 
 @dataclasses.dataclass
 class ValidationError:
+    """Store validation error message."""
     message: str
 
 
 def get_prim_geo_data_timedep(prim: Usd.Prim, timecode) -> tuple[int | None, int | None, int | None]:
     """
-     Extracts geometry metadata for a given prim at a specific timecode.
-     :return: A tuple with the number of points, number of faces, and number of vertices.
+    Extract geometry counts for a prim at a timecode.
+
+    Args:
+        prim: USD prim.
+        timecode: Time code.
+
+    Returns:
+        tuple: Point, face, and vertex counts.
     """
     geom = UsdGeom.Gprim(prim)
     if not geom:
@@ -39,8 +46,13 @@ def get_prim_geo_data_timedep(prim: Usd.Prim, timecode) -> tuple[int | None, int
 
 def get_interpolation(attr: UsdGeom.Primvar) -> str | None:
     """
-    Checks the interpolation type for a given attribute.
-    :return: Interpolation type as a string or None
+    Return interpolation type for an attribute.
+
+    Args:
+        attr: Primvar attribute.
+
+    Returns:
+        str | None: Interpolation type.
     """
     primvar = UsdGeom.Primvar(attr)
     if primvar.IsDefined():
@@ -61,8 +73,15 @@ def get_interpolation(attr: UsdGeom.Primvar) -> str | None:
 
 def create_interpolation_map(point_count: int, face_count: int, vertex_count: int) -> dict:
     """
-    Creates a mapping of interpolation type to expected value count.
-    :return: A mapping of interpolation type to expected value.
+    Create interpolation to count mapping.
+
+    Args:
+        point_count: Point count.
+        face_count: Face count.
+        vertex_count: Vertex count.
+
+    Returns:
+        dict: Interpolation map.
     """
     interp_map = {
         "vertex": point_count,  # points
@@ -75,10 +94,13 @@ def create_interpolation_map(point_count: int, face_count: int, vertex_count: in
 
 def validate_attributes(stage: Usd.Stage) -> list[ValidationError]:
     """
-    Performs a quality check on the attribute's value count against geometry,
-    based on its interpolation type. Handles time-dependent attributes.
+    Validate attribute value counts against geometry.
 
-    :return: list of ValidationError instances
+    Args:
+        stage: USD stage.
+
+    Returns:
+        list: Validation errors.
     """
     errors = []
     start_prim = stage.GetPseudoRoot()
@@ -123,8 +145,13 @@ def validate_attributes(stage: Usd.Stage) -> list[ValidationError]:
 
 def get_missing_references(stage: Usd.Stage) -> list[ValidationError]:
     """
-    Check missing references on usd layer.
-    :return: list of ValidationError instances
+    Collect missing layer and asset references.
+
+    Args:
+        stage: USD stage.
+
+    Returns:
+        list: Validation errors.
     """
     errors = []
     usd_layer = stage.GetRootLayer()
@@ -145,18 +172,26 @@ def get_missing_references(stage: Usd.Stage) -> list[ValidationError]:
 
 def remove_anonymous_errors(errors: list[ValidationError]) -> list[ValidationError]:
     """
-    Removes validation errors related to anonymous (in-memory) USD layers.
-    :return: cleaned list of ValidationErrors
+    Remove errors related to anonymous layers.
+
+    Args:
+        errors: Validation errors.
+
+    Returns:
+        list: Filtered errors.
     """
     return [err for err in errors if "anon:" not in err.message]
 
 
 def validate_render_primitives(stage: Usd.Stage) -> list[ValidationError]:
     """
-    Runs a quality check to ensure that render settings and a camera are present in the scene.
-    The camera is validated based on the render settings.
+    Validate render settings and camera presence.
 
-    :return: A list of ValidationError instances.
+    Args:
+        stage: USD stage.
+
+    Returns:
+        list: Validation errors.
     """
     render_settings = []
     render_products = []
@@ -190,9 +225,13 @@ def validate_render_primitives(stage: Usd.Stage) -> list[ValidationError]:
 
 def validate_material_binding(stage: Usd.Stage) -> list[ValidationError]:
     """
-    Traverses the USD stage and validates material bindings.
-    Includes checking whether the bound material exists and is active.
-    :return: list of ValidationError instances
+    Validate material bindings on mesh primitives.
+
+    Args:
+        stage: USD stage.
+
+    Returns:
+        list: Validation errors.
     """
     errors = []
     start_prim = stage.GetPseudoRoot()
@@ -211,8 +250,13 @@ def validate_material_binding(stage: Usd.Stage) -> list[ValidationError]:
 
 def check_prim_material_binding(prim: Usd.Prim) -> tuple[Usd.Prim, UsdShade.Tokens]:
     """
-    Checks if a primitive has material binding
-    :return: A tuple material binding and token
+    Return bound material and binding strength.
+
+    Args:
+        prim: USD prim.
+
+    Returns:
+        tuple: Material and strength.
     """
     mat_bind_api = UsdShade.MaterialBindingAPI(prim)
     bound_material, strength = mat_bind_api.ComputeBoundMaterial()
@@ -221,9 +265,10 @@ def check_prim_material_binding(prim: Usd.Prim) -> tuple[Usd.Prim, UsdShade.Toke
 
 def get_hou_selected_node() -> hou.Node:
     """
-    Returns the currently selected Houdini node to run QC checks from.
+    Return selected Houdini node.
 
-    :return: The selected node if one is selected or, displays an error message.
+    Returns:
+        hou.Node: Selected node.
     """
     if hou.selectedNodes():
         return hou.selectedNodes()[0]
