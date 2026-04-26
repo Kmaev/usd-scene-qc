@@ -1,28 +1,23 @@
 import os
-from importlib import reload
 
 import hou
-from PySide2 import QtWidgets, QtCore, QtGui
+from PySide6 import QtWidgets, QtCore, QtGui
 
-from usd_scene_qc import _hou_usd
-
-reload(_hou_usd)
-
-"""
-USDSceneQC is a QDialog widget for performing quality checks on a USD scene.
-
-It scans the scene for:
-- Missing references
-- Broken attributes and primvars
-- Missing render settings
-- Invalid material bindings
-"""
+from usd_scene_qc import hou_usd
 
 
 class USDSceneQC(QtWidgets.QDialog):
+    """""Run USD scene QC checks and display results."""
+
     def __init__(self, parent=None):
+        """
+        Initialize QC UI.
+
+        Args:
+            parent: Parent widget.
+        """
         super(USDSceneQC, self).__init__(parent=parent)
-        self.selected_node = _hou_usd.get_hou_selected_node()
+        self.selected_node = hou_usd.get_hou_selected_node()
         self.stage = self.selected_node.stage()
 
         self.resize(1050, 800)
@@ -81,13 +76,7 @@ class USDSceneQC(QtWidgets.QDialog):
         self.run_qc_button.clicked.connect(self.on_run_qc_button_clicked)
 
     def on_run_qc_button_clicked(self):
-        """
-         Populates the QC report list widget based on validation results.
-        - If there are errors, they will be added to the QC report list.
-        - If all QC checks are disabled, a warning message will be shown
-        - If no errors are found, a 'QC Passed' message will be displayed.
-
-        """
+        """Populate QC report from validation results."""
         self.qc_report_list.clear()
         errors = self.get_errors()
         if errors:
@@ -103,7 +92,7 @@ class USDSceneQC(QtWidgets.QDialog):
             item = QtWidgets.QListWidgetItem("No errors detected — QC successful.")
             self.qc_report_list.addItem(item)
 
-    def get_errors(self) -> list[_hou_usd.ValidationError]:
+    def get_errors(self) -> list[hou_usd.ValidationError]:
         """
         Executes all currently enabled QC validators and returns a list of detected errors.
 
@@ -112,26 +101,28 @@ class USDSceneQC(QtWidgets.QDialog):
         - Primitives without material bindings
         - Invalid render settings, camera
         - Attribute validation
-        :return: List of ValidationError
 
+         Returns:
+            list: Validation errors.
         """
-        errors: list[_hou_usd.ValidationError] = []
+        errors: list[hou_usd.ValidationError] = []
         if self.references_check.isChecked():
-            errors += _hou_usd.get_missing_references(self.stage)
+            errors += hou_usd.get_missing_references(self.stage)
         if self.mat_binding_check.isChecked():
-            errors += _hou_usd.validate_material_binding(self.stage)
+            errors += hou_usd.validate_material_binding(self.stage)
         if self.render_settings_check.isChecked():
-            errors += _hou_usd.validate_render_primitives(self.stage)
+            errors += hou_usd.validate_render_primitives(self.stage)
         if self.attribs_check.isChecked():
-            errors += _hou_usd.validate_attributes(self.stage)
+            errors += hou_usd.validate_attributes(self.stage)
 
         return errors
 
     def is_all_unchecked(self) -> bool:
         """
-        Checks if all validators are disabled.
+        Check if all validators are disabled.
 
-        :return: True if all validators are turned off, False otherwise.
+        Returns:
+            bool: True if all are disabled.
         """
         return not (self.references_check.isChecked() or
                     self.mat_binding_check.isChecked() or
@@ -142,7 +133,8 @@ class USDSceneQC(QtWidgets.QDialog):
 dialog = None
 
 
-def show_houdini():
+def show_houdini() -> QtWidgets.QDialog:
+    """Launch the USD scene QC UI."""
     import hou
     global dialog
     dialog = USDSceneQC(parent=hou.qt.mainWindow())
